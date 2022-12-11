@@ -10,25 +10,23 @@ import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
-import presentationproject.controller.RefreshBtnActionFilter;
-import presentationproject.controller.SerialInput;
+import presentationproject.model.ConnectedModules;
 import presentationproject.model.ConnectedModule;
 
-import java.util.Locale;
-
 public class ModuleLayout {
-    private SerialInput serialInput;
+    private ConnectedModules connectedModules;
     private GridPane root;
+    private static final String IMAGELOC = "C:\\Users\\7182094\\IdeaProjects\\PresentationProject\\src\\main\\resources\\";
 
-    public ModuleLayout(GridPane root, SerialInput serialInput) {
-        this.serialInput = serialInput;
+    public ModuleLayout(GridPane root) {
         this.root = root;
+
+        connectedModules = new ConnectedModules();
+
         root.setVgap(5);
         root.setHgap(5);
         root.setPadding(new Insets(10,10,10,10));
-        root.setGridLinesVisible(true);
         buildView();
     }
 
@@ -42,40 +40,25 @@ public class ModuleLayout {
         this.addRefreshButton();
     }
 
+    /**
+     * Removes all children and row / column constraints from the root gridpane so that we can update what's in it
+     */
     public void cleanRoot() {
-        // make sure there's nothing in the gridpane before we add to it
         root.getChildren().clear();
         root.getRowConstraints().clear();
         root.getColumnConstraints().clear();
     }
 
     public void addModules() {
-        ConnectedModule[] connectedModules = serialInput.getConnectedModules();
         for( int i = 0; i < 8; i ++ ) {
             Text label = new Text();
-            ImageView moduleImg;
-            ConnectedModule temp = connectedModules[i];
+            ConnectedModule currMod = connectedModules.getModuleAtIdx(i);
+            ImageView moduleImg = new ImageView(new Image(IMAGELOC + currMod.getImageFileName()));
 
-            if (!temp.getAddress().equals("x")) {
-                String text = temp.getAddress() + ": " + temp.getName();
-                label.setText(text);
-
-                switch(temp.getModType().strip().toLowerCase()) {
-                    case "audio" :
-                        moduleImg = new ImageView(new Image("C:\\Users\\7182094\\IdeaProjects\\PresentationProject\\src\\main\\resources\\audio.png"));
-                        break;
-                    case "d-pad":
-                        moduleImg = new ImageView(new Image("C:\\Users\\7182094\\IdeaProjects\\PresentationProject\\src\\main\\resources\\dpad.png"));
-                        break;
-                    case "joystick":
-                        moduleImg = new ImageView(new Image("C:\\Users\\7182094\\IdeaProjects\\PresentationProject\\src\\main\\resources\\joystick.png"));
-                        break;
-                    default:
-                        moduleImg = new ImageView(new Image("C:\\Users\\7182094\\IdeaProjects\\PresentationProject\\src\\main\\resources\\unknown.png"));
-                }
+            if (!currMod.getAddress().equals("x")) {
+                label.setText(currMod.getAddress() + ": " + currMod.getName());
             } else {
                 label.setText("Disconnected");
-                moduleImg = new ImageView(new Image("C:\\Users\\7182094\\IdeaProjects\\PresentationProject\\src\\main\\resources\\disconnected.png"));
             }
 
             int col = i % 4;
@@ -103,7 +86,7 @@ public class ModuleLayout {
         refreshBtn.addEventFilter(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent actionEvent) {
-                serialInput.readInput();
+                connectedModules.refreshModules();
                 buildView();
             }
         });
