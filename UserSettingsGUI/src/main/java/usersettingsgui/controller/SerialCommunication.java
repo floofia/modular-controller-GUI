@@ -1,8 +1,8 @@
 package usersettingsgui.controller;
 import com.fazecast.jSerialComm.SerialPort;
 import usersettingsgui.model.ConnectedModule;
-import java.io.InputStream;
-import java.io.OutputStream;
+
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 
 public class SerialCommunication {
@@ -15,108 +15,111 @@ public class SerialCommunication {
         comPort.setBaudRate(COMM_RATE);
         comPort.openPort();
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 0, 0);
-        InputStream in = comPort.getInputStream();
         String input = "";
-        int numLines = 0;
-        boolean atEnd = false;
-        boolean haveSeenStart = false;
 
         try {
-            String[] inputArr;
-            while (numLines < 3 || !atEnd) {
-                char c = (char) in.read();
-                input += c;
-                inputArr = input.split("\n");
-                numLines = inputArr.length;
+            InputStream inStream = comPort.getInputStream();
+            InputStreamReader isr = new InputStreamReader(inStream);
+            BufferedReader in = new BufferedReader(isr);
 
-                if (numLines > 2) {
-                    for(int i = 0; i < numLines; i++) {
-                        if(inputArr[i].contains("START")) {
-                            haveSeenStart = true;
-                        }
-                    }
+            String currLine;
+            int numLines = 0;
+            boolean haveSeenStart = false;
+            while(true) {
+                currLine = in.readLine();
+                System.out.println(currLine);
 
-                    if(haveSeenStart) {
-                        atEnd = inputArr[numLines - 1].equals("END DATA") || inputArr[numLines - 1].equals("END");
-                    }
+                if(currLine.contains("START")) {
+                    haveSeenStart = true;
                 }
 
-                if(atEnd) {
+                if(haveSeenStart) {
+                    input += currLine += "\n";
+                }
+
+                if(currLine.contains("END")) {
+                    in.close();
+                    isr.close();
+                    inStream.close();
                     break;
                 }
+
+                numLines = input.split("\n").length;
+                if(numLines > 10) {
+                    System.out.println("Error: more than 10 lines (8 modules+2 indicator lines) from device.");
+                } else if(numLines > 18) {
+                    System.out.println("Too much info from device. Stopping read.");
+                }
             }
-            in.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
+
         comPort.closePort();
         return input;
     }
 
+    /**
+     * NOTE: currently can only change name
+     *
+     * @param modToEdit - the module that is being edited
+     * @param newAddr - user input for what to change address to, if set to empty string we'll keep the current value
+     * @param newName - user input for what to change name to, if set to empty string we'll keep current value
+     */
     public void writeModuleSettings(ConnectedModule modToEdit, String newAddr, String newName) {
-        // what we have to send to let device know we want to enter module edit mode
-        String indicatorString = "-1\n";
-        char[] indicatorCharArr = new char[3];
-        char[] currAddrCharArr = new char[100];
-        char[] settingsCharArr = new char[300];
+        // what we have to send to let device know we want to enter module edit mode from the GUI
+        String guiIndicatorString = "-1\n";
         String currAddr = modToEdit.getAddress();
 
         if(newAddr == "") {
             newAddr = currAddr;
         }
+        currAddr += "\n";
 
         if(newName == "") {
             newName = modToEdit.getName();
         }
-        currAddr += "\n";
 
         String settings = newAddr + ";" + newName + ";" + modToEdit.getDeviceType() + ";" +
                 modToEdit.getDigitalAddr() + ";" + modToEdit.getAnalogAddr() + "\n";
-
-        indicatorString.getChars(0,2, indicatorCharArr, 0);
-        currAddr.getChars(0, currAddr.length(), currAddrCharArr, 0);
-        settings.getChars(0, settings.length(), settingsCharArr, 0);
-        System.out.println(settingsCharArr);
+        System.out.println(settings);
 
         SerialPort comPort = SerialPort.getCommPort(COMM_PORT);
         comPort.setBaudRate(COMM_RATE);
+        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 10000, 10000);
         comPort.openPort();
-        OutputStream out = comPort.getOutputStream();
-        InputStream in = comPort.getInputStream();
+        OutputStream outStream = comPort.getOutputStream();
+        OutputStreamWriter osw = new OutputStreamWriter(outStream);
+        BufferedWriter out = new BufferedWriter(osw);
+        InputStream inStream = comPort.getInputStream();
+        InputStreamReader isr = new InputStreamReader(inStream);
+        BufferedReader in = new BufferedReader(isr);
 
         try {
-            System.out.println(indicatorString);
-            comPort.writeBytes(indicatorString.getBytes(StandardCharsets.UTF_8), indicatorString.length());
+            out.write("-1\n");
+            out.flush();
+            Thread.sleep(125);
+            in.readLine();
+            out.write(currAddr);
+            out.flush();
+            Thread.sleep(125);
+            in.readLine();
+            out.write(settings);
+            out.flush();
+            Thread.sleep(125);
+            in.readLine();
 
-            String c = in.readAllBytes().toString();
-            System.out.println(c);
+            System.out.println("Done");
 
-            System.out.println(currAddr);
-            comPort.writeBytes(currAddr.getBytes(StandardCharsets.UTF_8), currAddr.length());
-            Thread.sleep(10 * 1000);
-            System.out.println(settings);
-            comPort.writeBytes(settings.getBytes(StandardCharsets.UTF_8), settings.length());
-//
-//            System.out.println(settings.getBytes(StandardCharsets.UTF_8));
-//            for(int i = 0; i < indicatorCharArr.length; i++) {
-//                out.write(indicatorCharArr[i]);
-//            }
-//            for(int i = 0; i < currAddrCharArr.length; i++) {
-//                if(currAddrCharArr[i] == 0) {
-//                    break;
-//                }
-//                out.write(currAddrCharArr[i]);
-//            }
-//            for(int i = 0; i < settingsCharArr.length; i++) {
-//                if(settingsCharArr[i] == 0) {
-//                    break;
-//                }
-//                out.write(settingsCharArr[i]);
-//            }
+            out.close();
+            in.close();
+            osw.close();
+            isr.close();
+            outStream.close();
+            inStream.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
-
         comPort.closePort();
     }
 }

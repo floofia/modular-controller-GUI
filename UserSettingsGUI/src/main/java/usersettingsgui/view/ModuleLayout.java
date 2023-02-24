@@ -22,7 +22,7 @@ public class ModuleLayout {
     private ConnectedModules connectedModules;
     private GridPane root;
     private Stage primaryStage;
-    private static final String IMAGELOC = "C:\\Users\\7182094\\IdeaProjects\\PresentationProject\\src\\main\\resources\\";
+    private static final String IMAGELOC = "C:\\Users\\7182094\\IdeaProjects\\UserSettingsGUI\\src\\main\\resources\\";
 
     public ModuleLayout(GridPane root, Stage primaryStage) {
         this.primaryStage = primaryStage;
