@@ -1,9 +1,7 @@
 package usersettingsgui.controller;
 import com.fazecast.jSerialComm.SerialPort;
 import usersettingsgui.model.ConnectedModule;
-
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 
 public class SerialCommunication {
     private static final String COMM_PORT = "COM7";
@@ -96,7 +94,7 @@ public class SerialCommunication {
         BufferedReader in = new BufferedReader(isr);
 
         try {
-            out.write("-1\n");
+            out.write(guiIndicatorString);
             out.flush();
             Thread.sleep(125);
             in.readLine();

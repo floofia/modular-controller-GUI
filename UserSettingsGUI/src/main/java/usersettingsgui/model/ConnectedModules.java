@@ -8,9 +8,7 @@ public class ConnectedModules {
     private static final SerialCommunication serialCommunication = new SerialCommunication();
     private ConnectedModule[] connectedModules = new ConnectedModule[8];
 
-    public ConnectedModules() {
-        refreshModules();
-    }
+    public ConnectedModules() { }
 
     private void clearModules() {
         for( int i = 0; i < 8; i++ ) {
@@ -19,7 +17,7 @@ public class ConnectedModules {
         moduleCount = 0;
     }
 
-    public void refreshModules() {
+    public void fetchModules() {
         clearModules();
         String input = serialCommunication.readInput();
         String[] inputArr = input.split("\n");
@@ -54,13 +52,7 @@ public class ConnectedModules {
             // in this case the module info isn't being passed in right, should have an error
             // 6 because there can be a `; ` at the end of the module info string
             if(modInfo.length != 5 && modInfo.length != 6) {
-                if(modInfo.length == 3) {
-                    modInfo[3] = "Digital 100";
-                    modInfo[4] = "Analog 100";
-                }
-                else {
-                    continue;
-                }
+                //error
             }
 
             // in this case we missed an END or the modules aren't being passed in right, should have an error

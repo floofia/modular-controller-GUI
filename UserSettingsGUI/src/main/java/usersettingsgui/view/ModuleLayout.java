@@ -6,15 +6,13 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.text.Text;
-import javafx.stage.Modality;
 import javafx.stage.Stage;
+import usersettingsgui.Main;
 import usersettingsgui.model.ConnectedModules;
 import usersettingsgui.model.ConnectedModule;
 
@@ -22,35 +20,37 @@ public class ModuleLayout {
     private ConnectedModules connectedModules;
     private GridPane root;
     private Stage primaryStage;
+    private Main parentWin;
     private static final String IMAGELOC = "C:\\Users\\7182094\\IdeaProjects\\UserSettingsGUI\\src\\main\\resources\\";
 
-    public ModuleLayout(GridPane root, Stage primaryStage) {
+    public ModuleLayout(GridPane root, Stage primaryStage, Main parentWin) {
         this.primaryStage = primaryStage;
         this.root = root;
-
+        this.parentWin = parentWin;
         connectedModules = new ConnectedModules();
 
         root.setVgap(5);
         root.setHgap(5);
         root.setPadding(new Insets(10,10,10,10));
-        buildView();
     }
 
     public void buildView() {
-        cleanRoot();
+        parentWin.setLoading(true);
+        this.connectedModules.fetchModules();
 
         /* Add the modules / module images */
         this.addModules();
 
         /* Add the button(s) */
         this.addRefreshButton();
+        parentWin.setLoading(false);
     }
 
     /**
      * Removes all children and row / column constraints from the root gridpane so that we can update what's in it
      */
     public void cleanRoot() {
-        root.getChildren().clear();
+        root.getChildren().removeAll();
         root.getRowConstraints().clear();
         root.getColumnConstraints().clear();
     }
@@ -64,10 +64,11 @@ public class ModuleLayout {
 
             if (!currMod.getAddress().equals("x")) {
                 label.setText(currMod.getAddress() + ": " + currMod.getName());
+                ModuleLayout that = this;
                 settingsBtn.addEventFilter(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
                     @Override
                     public void handle(ActionEvent actionEvent) {
-                        SettingsWindow settingsWin = new SettingsWindow(primaryStage, currMod);
+                        SettingsWindow settingsWin = new SettingsWindow(primaryStage, currMod, that);
                     }
                 });
             } else {
@@ -86,7 +87,7 @@ public class ModuleLayout {
         ColumnConstraints col = new ColumnConstraints();
         col.setHalignment(HPos.CENTER);
         col.setPercentWidth(25);
-        root.getColumnConstraints().add(col);
+        root.getColumnConstraints().addAll(col, col, col, col);
 
         RowConstraints row = new RowConstraints();
         row.setValignment(VPos.CENTER);
@@ -97,10 +98,10 @@ public class ModuleLayout {
 
     public void addRefreshButton() {
         Button refreshBtn = new Button("Refresh Devices");
+
         refreshBtn.addEventFilter(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent actionEvent) {
-                connectedModules.refreshModules();
                 buildView();
             }
         });
