@@ -1,5 +1,6 @@
 package usersettingsgui.view;
 
+import com.fazecast.jSerialComm.SerialPort;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
@@ -13,6 +14,7 @@ import javafx.scene.layout.*;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import usersettingsgui.Main;
+import usersettingsgui.controller.SerialCommunication;
 import usersettingsgui.model.ConnectedModules;
 import usersettingsgui.model.ConnectedModule;
 
@@ -21,13 +23,16 @@ public class ModuleLayout {
     private GridPane root;
     private Stage primaryStage;
     private Main parentWin;
+    private Button refreshBtn;
+    private static final SerialCommunication serialComm = new SerialCommunication();
     private static final String IMAGELOC = "C:\\Users\\7182094\\IdeaProjects\\UserSettingsGUI\\src\\main\\resources\\";
 
-    public ModuleLayout(GridPane root, Stage primaryStage, Main parentWin) {
+    public ModuleLayout(GridPane root, Stage primaryStage, Main parentWin, String portName) {
         this.primaryStage = primaryStage;
         this.root = root;
         this.parentWin = parentWin;
-        connectedModules = new ConnectedModules();
+        serialComm.setPort(portName);
+        connectedModules = new ConnectedModules(serialComm);
 
         root.setVgap(5);
         root.setHgap(5);
@@ -35,6 +40,7 @@ public class ModuleLayout {
     }
 
     public void buildView() {
+        cleanRoot();
         parentWin.setLoading(true);
         this.connectedModules.fetchModules();
 
@@ -50,7 +56,10 @@ public class ModuleLayout {
      * Removes all children and row / column constraints from the root gridpane so that we can update what's in it
      */
     public void cleanRoot() {
-        root.getChildren().removeAll();
+        for(int i = 1; i < root.getChildren().toArray().length; i++) {
+            root.getChildren().remove(i);
+        }
+        root.getChildren().remove(this.refreshBtn);
         root.getRowConstraints().clear();
         root.getColumnConstraints().clear();
     }
@@ -68,7 +77,7 @@ public class ModuleLayout {
                 settingsBtn.addEventFilter(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
                     @Override
                     public void handle(ActionEvent actionEvent) {
-                        SettingsWindow settingsWin = new SettingsWindow(primaryStage, currMod, that);
+                        SettingsWindow settingsWin = new SettingsWindow(primaryStage, currMod, that, serialComm);
                     }
                 });
             } else {
@@ -97,7 +106,7 @@ public class ModuleLayout {
     }
 
     public void addRefreshButton() {
-        Button refreshBtn = new Button("Refresh Devices");
+        this.refreshBtn = new Button("Refresh Devices");
 
         refreshBtn.addEventFilter(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
             @Override

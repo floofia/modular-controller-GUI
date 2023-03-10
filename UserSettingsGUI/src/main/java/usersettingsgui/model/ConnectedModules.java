@@ -5,10 +5,12 @@ import usersettingsgui.controller.SerialCommunication;
 public class ConnectedModules {
     private static final String MOD_INFO_SEPERATOR = "; ";
     private int moduleCount = 0;
-    private static final SerialCommunication serialCommunication = new SerialCommunication();
+    private SerialCommunication serialComm;
     private ConnectedModule[] connectedModules = new ConnectedModule[8];
 
-    public ConnectedModules() { }
+    public ConnectedModules(SerialCommunication serialComm) {
+        this.serialComm = serialComm;
+    }
 
     private void clearModules() {
         for( int i = 0; i < 8; i++ ) {
@@ -19,7 +21,7 @@ public class ConnectedModules {
 
     public void fetchModules() {
         clearModules();
-        String input = serialCommunication.readInput();
+        String input = serialComm.readInput();
         String[] inputArr = input.split("\n");
         int numLines = inputArr.length;
         int i = 0;
@@ -29,6 +31,11 @@ public class ConnectedModules {
         // ignore anything that comes before the first START
         while(!currLine.strip().equals("START")) {
             i++;
+            if(i >= inputArr.length) {
+                System.out.print("ERROR: Input array too short");
+                System.out.println(inputArr.length);
+                break;
+            }
             currLine = inputArr[i];
         }
 
@@ -52,7 +59,14 @@ public class ConnectedModules {
             // in this case the module info isn't being passed in right, should have an error
             // 6 because there can be a `; ` at the end of the module info string
             if(modInfo.length != 5 && modInfo.length != 6) {
-                //error
+                System.out.print("ERROR modinfo wrong\nLENGTH: ");
+                System.out.println(modInfo.length);
+                for(int k = 0; k < modInfo.length; k++) {
+                    System.out.print("At index ");
+                    System.out.print(k);
+                    System.out.println(modInfo[i]);
+                }
+                continue;
             }
 
             // in this case we missed an END or the modules aren't being passed in right, should have an error

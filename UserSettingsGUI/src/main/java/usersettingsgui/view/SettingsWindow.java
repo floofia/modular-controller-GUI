@@ -26,12 +26,14 @@ public class SettingsWindow {
     private final GridPane root;
     private TextField nameField;
     private TextField addrField;
+    private SerialCommunication serialComm;
     private ModuleLayout originalWin;
 
-    public SettingsWindow(Stage parentStage, ConnectedModule modToEdit, ModuleLayout originalWin) {
+    public SettingsWindow(Stage parentStage, ConnectedModule modToEdit, ModuleLayout originalWin, SerialCommunication serialComm) {
         this.parentStage = parentStage;
         this.root = new GridPane();
         this.originalWin = originalWin;
+        this.serialComm = serialComm;
         setModuleThenShow(modToEdit);
     }
 
@@ -114,7 +116,6 @@ public class SettingsWindow {
             @Override
             public void handle(ActionEvent actionEvent) {
                 that.disable();
-                SerialCommunication serialComm = new SerialCommunication();
                 serialComm.writeModuleSettings(modToEdit, that.addrField.getText(), that.nameField.getText());
                 that.enable();
             }

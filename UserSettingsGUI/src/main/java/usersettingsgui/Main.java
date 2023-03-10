@@ -8,17 +8,25 @@ import javafx.scene.text.Text;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import usersettingsgui.view.ModuleLayout;
+import usersettingsgui.view.PortSelection;
 
 public class Main extends Application {
     private Scene scene;
     private Text loadingText = new Text("Loading Modules. . .");
+    private GridPane root;
+    private Stage primaryStage;
+    private String port;
 
     public static void main(String[] args) {
         launch(args);
     }
 
     public void start(Stage primaryStage) {
-        GridPane root = new GridPane();
+        this.primaryStage = primaryStage;
+
+        root = new GridPane();
+        root.add(loadingText, 0,0);
+        loadingText.setVisible(false);
 
         int wd = (int) Screen.getPrimary().getBounds().getWidth();
         int ht = (int) Screen.getPrimary().getBounds().getHeight();
@@ -29,8 +37,16 @@ public class Main extends Application {
         primaryStage.setTitle("Modules Connected");
         primaryStage.setScene(scene);
 
-        ModuleLayout moduleLayout = new ModuleLayout(root, primaryStage, this);
+        PortSelection portSelection = new PortSelection(root, this);
         primaryStage.show();
+    }
+
+    public void setModuleLayout(String portName) {
+        // the combo box will always be index 1
+        this.root.getChildren().remove(1);
+        // after removing combo box submit button will also be index 1
+        this.root.getChildren().remove(1);
+        ModuleLayout moduleLayout = new ModuleLayout(root, primaryStage, this, portName);
         setLoading(true);
         moduleLayout.buildView();
         setLoading(false);
@@ -38,10 +54,12 @@ public class Main extends Application {
 
     // this does nothing even though everything I found online suggests it should do something
     public void setLoading(boolean isLoading) {
+        loadingText.setVisible(isLoading);
         if(isLoading) {
             scene.setCursor(Cursor.WAIT);
         } else {
             scene.setCursor(Cursor.DEFAULT);
         }
+        primaryStage.show();
     }
 }
