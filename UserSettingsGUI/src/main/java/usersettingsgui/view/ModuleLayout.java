@@ -25,7 +25,7 @@ public class ModuleLayout {
     private Main parentWin;
     private Button refreshBtn;
     private static final SerialCommunication serialComm = new SerialCommunication();
-    private static final String IMAGELOC = "C:\\Users\\7182094\\IdeaProjects\\UserSettingsGUI\\src\\main\\resources\\";
+    private static final String IMAGELOC = "file:./src/main/resources/";
 
     public ModuleLayout(GridPane root, Stage primaryStage, Main parentWin, String portName) {
         this.primaryStage = primaryStage;
