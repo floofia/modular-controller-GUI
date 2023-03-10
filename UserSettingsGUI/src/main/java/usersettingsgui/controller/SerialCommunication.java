@@ -1,17 +1,15 @@
 package usersettingsgui.controller;
 import com.fazecast.jSerialComm.SerialPort;
 import usersettingsgui.model.ConnectedModule;
-
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 
 public class SerialCommunication {
-    private static final String COMM_PORT = "COM7";
+    private String portName;
     private static final int COMM_RATE = 115200;
     public SerialCommunication() { }
 
     public String readInput() {
-        SerialPort comPort = SerialPort.getCommPort(COMM_PORT);
+        SerialPort comPort = SerialPort.getCommPort(this.portName);
         comPort.setBaudRate(COMM_RATE);
         comPort.openPort();
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 0, 0);
@@ -27,7 +25,6 @@ public class SerialCommunication {
             boolean haveSeenStart = false;
             while(true) {
                 currLine = in.readLine();
-                System.out.println(currLine);
 
                 if(currLine.contains("START")) {
                     haveSeenStart = true;
@@ -82,9 +79,8 @@ public class SerialCommunication {
 
         String settings = newAddr + ";" + newName + ";" + modToEdit.getDeviceType() + ";" +
                 modToEdit.getDigitalAddr() + ";" + modToEdit.getAnalogAddr() + "\n";
-        System.out.println(settings);
 
-        SerialPort comPort = SerialPort.getCommPort(COMM_PORT);
+        SerialPort comPort = SerialPort.getCommPort(this.portName);
         comPort.setBaudRate(COMM_RATE);
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 10000, 10000);
         comPort.openPort();
@@ -96,7 +92,7 @@ public class SerialCommunication {
         BufferedReader in = new BufferedReader(isr);
 
         try {
-            out.write("-1\n");
+            out.write(guiIndicatorString);
             out.flush();
             Thread.sleep(125);
             in.readLine();
@@ -121,5 +117,9 @@ public class SerialCommunication {
             e.printStackTrace();
         }
         comPort.closePort();
+    }
+
+    public void setPort(String portName) {
+        this.portName = portName;
     }
 }

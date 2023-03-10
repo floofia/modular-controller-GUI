@@ -5,11 +5,11 @@ import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.control.TextFormatter;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
@@ -17,7 +17,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.util.converter.IntegerStringConverter;
+import javafx.stage.WindowEvent;
 import usersettingsgui.controller.SerialCommunication;
 import usersettingsgui.model.ConnectedModule;
 
@@ -26,10 +26,14 @@ public class SettingsWindow {
     private final GridPane root;
     private TextField nameField;
     private TextField addrField;
+    private SerialCommunication serialComm;
+    private ModuleLayout originalWin;
 
-    public SettingsWindow(Stage parentStage, ConnectedModule modToEdit) {
+    public SettingsWindow(Stage parentStage, ConnectedModule modToEdit, ModuleLayout originalWin, SerialCommunication serialComm) {
         this.parentStage = parentStage;
         this.root = new GridPane();
+        this.originalWin = originalWin;
+        this.serialComm = serialComm;
         setModuleThenShow(modToEdit);
     }
 
@@ -65,6 +69,13 @@ public class SettingsWindow {
         settingsWin.setX(this.parentStage.getX() + (this.parentStage.getWidth() / 4));
         settingsWin.setY(this.parentStage.getY());
         settingsWin.show();
+        SettingsWindow that = this;
+        settingsWin.setOnCloseRequest(new EventHandler<WindowEvent>() {
+            @Override
+            public void handle(WindowEvent windowEvent) {
+//                that.originalWin.enable();
+            }
+        });
     }
 
     private void addForm(ConnectedModule modToEdit) {
@@ -89,25 +100,38 @@ public class SettingsWindow {
     }
 
     private void addButtons(ConnectedModule modToEdit) {
-        Button resetBtn = new Button("Reset");
-        resetBtn.addEventFilter(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent actionEvent) {
-                // set back to values saved on the module
-            }
-        });;
+        // no functional purpose for reset button currently
+//        Button resetBtn = new Button("Reset");
+//        resetBtn.setDisable(true);
+//        resetBtn.addEventFilter(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
+//            @Override
+//            public void handle(ActionEvent actionEvent) {
+//                // set back to values saved on the module
+//            }
+//        });
 
         Button saveBtn = new Button("Save Changes");
         SettingsWindow that = this;
         saveBtn.addEventFilter(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent actionEvent) {
-                SerialCommunication serialComm = new SerialCommunication();
+                that.disable();
                 serialComm.writeModuleSettings(modToEdit, that.addrField.getText(), that.nameField.getText());
+                that.enable();
             }
         });
 
-        this.root.add(resetBtn, 1, 3);
+//        this.root.add(resetBtn, 1, 3);
         this.root.add(saveBtn, 2, 3);
+    }
+
+    private void disable() {
+        this.root.setCursor(Cursor.WAIT);
+        this.root.setDisable(true);
+    }
+
+    private void enable() {
+        this.root.setCursor(Cursor.DEFAULT);
+        this.root.setDisable(false);
     }
 }
