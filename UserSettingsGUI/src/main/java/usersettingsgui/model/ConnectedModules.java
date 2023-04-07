@@ -3,7 +3,7 @@ package usersettingsgui.model;
 import usersettingsgui.controller.SerialCommunication;
 
 public class ConnectedModules {
-    private static final String MOD_INFO_SEPERATOR = "; ";
+    private static final String MOD_INFO_SEPARATOR = ";";
     private int moduleCount = 0;
     private SerialCommunication serialComm;
     private ConnectedModule[] connectedModules = new ConnectedModule[8];
@@ -14,7 +14,7 @@ public class ConnectedModules {
 
     private void clearModules() {
         for( int i = 0; i < 8; i++ ) {
-            connectedModules[i] = new ConnectedModule("x", "x", "x", "Digital: 100", "Analog: 100");
+            connectedModules[i] = new ConnectedModule("x", "x", "x", "Pins: 100");
         }
         moduleCount = 0;
     }
@@ -54,17 +54,17 @@ public class ConnectedModules {
             if(currLine.strip().equals("START")) {
                 continue;
             }
-            String[] modInfo = currLine.split(MOD_INFO_SEPERATOR);
+            String[] modInfo = currLine.split(MOD_INFO_SEPARATOR);
 
             // in this case the module info isn't being passed in right, should have an error
             // 6 because there can be a `; ` at the end of the module info string
-            if(modInfo.length != 5 && modInfo.length != 6) {
+            if(modInfo.length != 4 && modInfo.length != 5) {
                 System.out.print("ERROR modinfo wrong\nLENGTH: ");
                 System.out.println(modInfo.length);
                 for(int k = 0; k < modInfo.length; k++) {
                     System.out.print("At index ");
                     System.out.print(k);
-                    System.out.println(modInfo[i]);
+                    System.out.println(modInfo[k]);
                 }
                 continue;
             }
@@ -74,7 +74,7 @@ public class ConnectedModules {
                 break;
             }
 
-            connectedModules[moduleIdx] = new ConnectedModule(modInfo[0], modInfo[1], modInfo[2], modInfo[3], modInfo[4]);
+            connectedModules[moduleIdx] = new ConnectedModule(modInfo[0], modInfo[1], modInfo[2], modInfo[3]);
             moduleIdx++;
         }
     }

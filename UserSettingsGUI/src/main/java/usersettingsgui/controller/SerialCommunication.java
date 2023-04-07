@@ -19,12 +19,19 @@ public class SerialCommunication {
             InputStream inStream = comPort.getInputStream();
             InputStreamReader isr = new InputStreamReader(inStream);
             BufferedReader in = new BufferedReader(isr);
+            OutputStream outStream = comPort.getOutputStream();
+            OutputStreamWriter osw = new OutputStreamWriter(outStream);
+            BufferedWriter out = new BufferedWriter(osw);
+            // write 200 to indicate to device that we want module information
+            out.write("200");
+            out.flush();
 
             String currLine;
             int numLines = 0;
             boolean haveSeenStart = false;
             while(true) {
                 currLine = in.readLine();
+                System.out.println(currLine);
 
                 if(currLine.contains("START")) {
                     haveSeenStart = true;
@@ -63,7 +70,7 @@ public class SerialCommunication {
      * @param newAddr - user input for what to change address to, if set to empty string we'll keep the current value
      * @param newName - user input for what to change name to, if set to empty string we'll keep current value
      */
-    public void writeModuleSettings(ConnectedModule modToEdit, String newAddr, String newName) {
+    public void writeModuleSettings(ConnectedModule modToEdit, String newAddr, String newName, String newDevType, String pinsString) {
         // what we have to send to let device know we want to enter module edit mode from the GUI
         String guiIndicatorString = "-1\n";
         String currAddr = modToEdit.getAddress();
@@ -77,8 +84,10 @@ public class SerialCommunication {
             newName = modToEdit.getName();
         }
 
-        String settings = newAddr + ";" + newName + ";" + modToEdit.getDeviceType() + ";" +
-                modToEdit.getDigitalAddr() + ";" + modToEdit.getAnalogAddr() + "\n";
+        String settings = newAddr + ";" + newName + ";" + newDevType + ";" +
+                pinsString + "\n";
+
+        System.out.println(settings);
 
         SerialPort comPort = SerialPort.getCommPort(this.portName);
         comPort.setBaudRate(COMM_RATE);
@@ -92,17 +101,25 @@ public class SerialCommunication {
         BufferedReader in = new BufferedReader(isr);
 
         try {
+            // we have to read in whenever the device writes out for anything to work
+            // please, I'm begging you, just take my word for it and leave these in.readLine()'s as they are
+            // unless another Serial.print gets added to the gui interface controller code, then we'll need more
             out.write(guiIndicatorString);
             out.flush();
             Thread.sleep(125);
+//            System.out.println(in.readLine());
             in.readLine();
             out.write(currAddr);
             out.flush();
             Thread.sleep(125);
+//            System.out.println(in.readLine());
             in.readLine();
             out.write(settings);
             out.flush();
             Thread.sleep(125);
+//            System.out.println(in.readLine());
+            in.readLine();
+//            System.out.println(in.readLine());
             in.readLine();
 
             System.out.println("Done");

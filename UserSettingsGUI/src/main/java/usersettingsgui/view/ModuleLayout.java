@@ -1,12 +1,12 @@
 package usersettingsgui.view;
 
-import com.fazecast.jSerialComm.SerialPort;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -56,10 +56,12 @@ public class ModuleLayout {
      * Removes all children and row / column constraints from the root gridpane so that we can update what's in it
      */
     public void cleanRoot() {
-        for(int i = 1; i < root.getChildren().toArray().length; i++) {
-            root.getChildren().remove(i);
+        Node[] allChildrenNodes = root.getChildren().toArray(new Node[0]);
+        for(int i = 1; i < allChildrenNodes.length; i++) {
+            removeNode(allChildrenNodes[i]);
         }
-        root.getChildren().remove(this.refreshBtn);
+
+        removeNode(this.refreshBtn);
         root.getRowConstraints().clear();
         root.getColumnConstraints().clear();
     }
@@ -77,7 +79,7 @@ public class ModuleLayout {
                 settingsBtn.addEventFilter(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
                     @Override
                     public void handle(ActionEvent actionEvent) {
-                        SettingsWindow settingsWin = new SettingsWindow(primaryStage, currMod, that, serialComm);
+                        SettingsWindow settingsWin = new SettingsWindow(primaryStage, currMod, serialComm);
                     }
                 });
             } else {
@@ -119,5 +121,14 @@ public class ModuleLayout {
         RowConstraints btnRow = new RowConstraints();
         btnRow.setPercentHeight(10);
         root.getRowConstraints().add(btnRow);
+    }
+
+    private void removeNode(Node nodeToRemove) {
+        /* you might think "couldn't you just remove it by index? or by the node itself?" and based on
+        documentation, yes, that should work, but you'd still be wrong (T_T;) */
+        Integer idx = root.getChildren().indexOf(nodeToRemove);
+        // if the index is below 0 the node wasn't found so we don't need to remove it
+        if(idx >= 0)
+            root.getChildren().remove(root.getChildren().get(idx));
     }
 }

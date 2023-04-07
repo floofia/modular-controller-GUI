@@ -1,19 +1,20 @@
 package usersettingsgui.model;
 
+import java.util.Arrays;
+
 public class ConnectedModule {
     protected String address;
     protected String name;
     protected String deviceType;
-    protected Number digitalAddr;
-    protected Number analogAddr;
+    protected Integer[] pins = new Integer[20];
     protected String imageFileName;
 
-    public ConnectedModule(String address, String name, String deviceType, String digitalAddr, String analogAddr) {
+    public ConnectedModule(String address, String name, String deviceType, String pins) {
         this.address = address.strip();
         this.name = name.strip();
         this.deviceType = deviceType.strip();
 
-        setAddresses(digitalAddr, analogAddr);
+        setPins(pins);
         setImageFileName();
     }
 
@@ -25,8 +26,20 @@ public class ConnectedModule {
             case "d-pad":
                 this.imageFileName = "dpad.png";
                 break;
-            case "joystick":
-                this.imageFileName = "joystick.png";
+            case "l joystick":
+                this.imageFileName = "leftjoystick.png";
+                break;
+            case "r joystick":
+                this.imageFileName = "rightjoystick.png";
+                break;
+            case "l trigger":
+                this.imageFileName = "lefttrigger.png";
+                break;
+            case "r trigger":
+                this.imageFileName = "righttrigger.png";
+                break;
+            case "face buttons":
+                this.imageFileName = "facebuttons.png";
                 break;
             case "x":
                 this.imageFileName = "disconnected.png";
@@ -36,24 +49,28 @@ public class ConnectedModule {
         }
     }
 
-    private void setAddresses(String digitalAddr, String analogAddr) {
-        var tempArr = digitalAddr.split(" ");
+    private void setPins(String givenPins) {
+        Arrays.fill(pins, -1);
+        // there's a label before the pin numbers a la "Pins: 1, 2, 3"
+        givenPins = givenPins.split(": ")[1];
+        String[] pinsArr = givenPins.split(", ");
+        Integer pinsCount = pinsArr.length;
+        for(int i = 0; i < pinsCount; i++) {
             try {
-                this.digitalAddr = Integer.parseInt(tempArr[1]);
+                Integer pin = Integer.parseInt(pinsArr[i]);
+                pins[i] = pin;
             } catch(Exception e) {
-                e.printStackTrace();
+                System.out.println(e.getMessage());
             }
-
-        tempArr = digitalAddr.split(" ");
-            try {
-                this.analogAddr = Integer.parseInt(tempArr[1]);
-            } catch(Exception e) {
-                e.printStackTrace();
-            }
+        }
     }
 
     public String getAddress() {
         return this.address;
+    }
+
+    public int getAddressInt() {
+        return Integer.parseInt(this.address);
     }
 
     public String getName() {
@@ -68,11 +85,24 @@ public class ConnectedModule {
         return this.imageFileName;
     }
 
-    public Number getDigitalAddr() {
-        return this.digitalAddr;
+    public Number[] getPins() {
+        return this.pins;
     }
 
-    public Number getAnalogAddr() {
-        return this.analogAddr;
+    public String getFullPinsString() {
+        String ret = "Pins: ";
+        for(int i = 0; i < pins.length; i++) {
+            // once we start getting -1 we're past the initialized pins
+            if(pins[i] == -1) {
+                break;
+            }
+            if(i > 0) {
+                ret += ", ";
+            }
+            ret += pins[i];
+        }
+
+        ret+= ";";
+        return ret;
     }
 }
