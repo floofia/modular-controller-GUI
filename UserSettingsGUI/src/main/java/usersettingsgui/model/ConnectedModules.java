@@ -1,27 +1,36 @@
 package usersettingsgui.model;
 
+import javafx.stage.Stage;
 import usersettingsgui.controller.SerialCommunication;
+import usersettingsgui.view.ErrorWindow;
 
 public class ConnectedModules {
     private static final String MOD_INFO_SEPARATOR = ";";
     private int moduleCount = 0;
     private SerialCommunication serialComm;
     private ConnectedModule[] connectedModules = new ConnectedModule[8];
+    private Stage stageForErrWin;
 
-    public ConnectedModules(SerialCommunication serialComm) {
+    public ConnectedModules(SerialCommunication serialComm, Stage stageForErrWin) {
         this.serialComm = serialComm;
+        this.stageForErrWin = stageForErrWin;
     }
 
-    private void clearModules() {
+    public void clearModules() {
         for( int i = 0; i < 8; i++ ) {
             connectedModules[i] = new ConnectedModule("x", "x", "x", "Pins: 100");
         }
         moduleCount = 0;
     }
 
-    public void fetchModules() {
-        clearModules();
-        String input = serialComm.readInput();
+    /**
+     * @return boolean - whether or not successfully read
+     */
+    public boolean fetchModules() {
+        //only clear the modules if they need to be
+        if(!connectedModules[0].getName().equals("x"))
+            clearModules();
+        String input = serialComm.readInput(stageForErrWin);
         String[] inputArr = input.split("\n");
         int numLines = inputArr.length;
         int i = 0;
@@ -31,18 +40,15 @@ public class ConnectedModules {
         // ignore anything that comes before the first START
         while(!currLine.strip().equals("START")) {
             i++;
+            // this means we reached the end without finding the "START" keyword
             if(i >= inputArr.length) {
-                System.out.print("ERROR: Input array too short");
-                System.out.println(inputArr.length);
-                break;
+                new ErrorWindow(stageForErrWin, "There was an error reading in modules, please try again.\nError: END without START");
+                return false;
             }
             currLine = inputArr[i];
         }
 
-        /* technically this doesn't error handle as thoroughly as we'll want the real code to do it, but that was
-           best for getting it done quickly for the presentation
-           for this reason I have comments for where and what I'm pretty sure we'll need to watch for so I can address
-           this in the true GUI*/
+        int startIdx = i;
         for( ; i < numLines; i++) {
             currLine = inputArr[i];
 
@@ -50,33 +56,34 @@ public class ConnectedModules {
                 break;
             }
 
-            // in this case we missed an END so we should have an error of some sort
             if(currLine.strip().equals("START")) {
+                // this means we saw the "START" keyword twice before seeing the "END" keyword
+                if(i > startIdx) {
+                    new ErrorWindow(stageForErrWin, "There was an error reading in modules (start seen twice), please try again.\nError: START without END");
+                    return false;
+                }
+                //otherwise this is just the first "START" and we wanna skip trying to process
                 continue;
             }
             String[] modInfo = currLine.split(MOD_INFO_SEPARATOR);
 
-            // in this case the module info isn't being passed in right, should have an error
-            // 6 because there can be a `; ` at the end of the module info string
+            // this means a module was passed in with the wrong amount of info
             if(modInfo.length != 4 && modInfo.length != 5) {
-                System.out.print("ERROR modinfo wrong\nLENGTH: ");
-                System.out.println(modInfo.length);
-                for(int k = 0; k < modInfo.length; k++) {
-                    System.out.print("At index ");
-                    System.out.print(k);
-                    System.out.println(modInfo[k]);
-                }
-                continue;
+                new ErrorWindow(stageForErrWin, "There was an error reading in modules (wrong amount of info), please try again.\nError: MODINFO Length Wrong");
+                return false;
             }
 
-            // in this case we missed an END or the modules aren't being passed in right, should have an error
+            // this means we missed an END or the modules aren't being passed in right
             if(moduleIdx >= 8) {
-                break;
+                new ErrorWindow(stageForErrWin, "There was an error reading in modules (missed an end), please try again.\nError: Too Many Modules");
+                return false;
             }
 
             connectedModules[moduleIdx] = new ConnectedModule(modInfo[0], modInfo[1], modInfo[2], modInfo[3]);
             moduleIdx++;
+            moduleCount++;
         }
+        return true;
     }
 
     public ConnectedModule getModuleAtIdx(int i) {
@@ -85,5 +92,15 @@ public class ConnectedModules {
 
     public int getModuleCount() {
         return moduleCount;
+    }
+
+    public String getAllAddresses() {
+        String addresses = "";
+        for(int i = 0; i < getModuleCount(); i++) {
+            if(i > 0)
+                addresses += ",";
+            addresses += connectedModules[i].getAddress();
+        }
+        return addresses;
     }
 }

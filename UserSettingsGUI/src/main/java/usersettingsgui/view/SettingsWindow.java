@@ -21,8 +21,6 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.stage.Window;
-import javafx.stage.WindowEvent;
 import javafx.util.converter.IntegerStringConverter;
 import usersettingsgui.controller.SerialCommunication;
 import usersettingsgui.model.ConnectedModule;
@@ -39,6 +37,8 @@ public class SettingsWindow {
     private Label addrNote = new Label();
     private TextField customAddrField;
     private Button saveBtn;
+    private Button resetBtn;
+    private Button defaultsBtn;
 
     private ConnectedModule modToEdit;
     private SerialCommunication serialComm;
@@ -48,6 +48,7 @@ public class SettingsWindow {
     private String newDevType;
     private Integer firstAddrDigit;
     private int pinRowsCount = 0;
+    private String allModAddresses;
 
     private ObservableList<String> devTypeList = FXCollections.observableArrayList("Face Buttons", "Left Trigger", "Right Trigger", "Left Joystick", "Right Joystick", "D-Pad", "Feedback Device", "Custom");
     private String[] devTypeValues = {"Face Buttons", "L Trigger", "R Trigger", "L Joystick", "R Joystick", "D-Pad", "Feedback", "Custom"};
@@ -67,11 +68,12 @@ public class SettingsWindow {
     private Number[] pwmCapablePins = {0, 1, 9, 12, 13};
     private Number[] digitalCapablePins = {0, 1, 2, 3, 20, 5, 6, 7, 8, 9, 12, 13, 14, 18, 19};
 
-    public SettingsWindow(Stage parentStage, ConnectedModule modToEdit, SerialCommunication serialComm) {
+    public SettingsWindow(Stage parentStage, ConnectedModule modToEdit, SerialCommunication serialComm, String allModAddresses) {
         this.parentStage = parentStage;
         this.root = new GridPane();
         this.serialComm = serialComm;
         this.modToEdit = modToEdit;
+        this.allModAddresses = allModAddresses;
 
         setModuleThenShow();
     }
@@ -149,40 +151,21 @@ public class SettingsWindow {
     }
 
     private void addDevTypeBox() {
-        Label modTypeLabel = new Label("Module Type: ");
+        Label devTypeLabel = new Label("Module Type: ");
         this.devTypeBox = new ComboBox(devTypeList);
         newDevType = modToEdit.getDeviceType();
         firstAddrDigit = determineAddrRange(true);
         root.add(addrLabel, 0, 3, 1, 1);
-        root.add(addrNote, 1, 4, 3, 1);
+        root.add(addrNote, 0, 4, 4, 1);
         SettingsWindow that = this;
 
         devTypeBox.valueProperty().addListener(new ChangeListener() {
             @Override
             public void changed(ObservableValue observableValue, Object oldVal, Object newVal) {
-                that.newDevType = devTypeValues[devTypeList.indexOf(newVal)];
-                Integer newFirstAddrDigit = determineAddrRange(false);
-
-                if(newFirstAddrDigit < 0 && that.firstAddrDigit > 0) {
-                /* this means we went from a defined type to a custom type so we need to change around the address part
-                of the form to reflect that */
-                    that.removeNode(that.addrField);
-                    that.addCustomAddrForm();
-                } else if(newFirstAddrDigit > 0 && that.firstAddrDigit < 0) {
-                    /* this means we went from a custom type to a defined type*/
-                    that.removeNode(that.customAddrField);
-                    that.addStandardAddrForm(newFirstAddrDigit);
-                } else if(newFirstAddrDigit > 0 && that.firstAddrDigit > 0) {
-                    // in this case we just need to change the first digit of the address
-                    that.addrLabel.setText("Address: " + newFirstAddrDigit);
-                    that.addrNote.setText("Note: The address will be a two digit number but the first digit will be " + newFirstAddrDigit);
-                }
-
-                that.firstAddrDigit = newFirstAddrDigit;
-                that.addPins();
+                that.devTypeChanged(newVal);
             }
         });
-        this.root.add(modTypeLabel, 0, 2, 1, 1);
+        this.root.add(devTypeLabel, 0, 2, 1, 1);
         this.root.add(devTypeBox, 1, 2, 3, 1);
     }
 
@@ -273,7 +256,7 @@ public class SettingsWindow {
             pinComboBoxNodes[i] = null;
         }
         pinRowsCount = 0;
-        removeNode(saveBtn);
+        removeButtons();
 
         for(int i = 0; i < labels.length; i++) {
             Text pinLabel = new Text(labels[i] + ": ");
@@ -366,48 +349,145 @@ public class SettingsWindow {
     }
 
     private void addButtons() {
-        // no functional purpose for reset button currently
-//        Button resetBtn = new Button("Reset");
-//        resetBtn.setDisable(true);
-//        resetBtn.addEventFilter(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
-//            @Override
-//            public void handle(ActionEvent actionEvent) {
-//                // set back to values saved on the module
-//            }
-//        });
-
-        saveBtn = new Button("Save Changes");
         SettingsWindow that = this;
-        saveBtn.addEventFilter(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
+
+        defaultsBtn = new Button("Set to Default Pins");
+        defaultsBtn.addEventFilter(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent actionEvent) {
-                that.disable();
-                String newAddr = "";
-                Integer devTypeIdx = that.devTypeList.indexOf(that.devTypeBox.getValue());
-                //TODO: Handle feedback
-                String newModType = devTypeValues[devTypeIdx];
-                if(firstAddrDigit > 0) {
-                    newAddr = that.firstAddrDigit + that.addrField.getValue().toString();
-                } else {
-                    newAddr = that.customAddrField.getText();
-                }
-                String newName = that.nameField.getText();
-                if(newName.contains(";")) {
-                    // TODO: put in explanation for user
-                    return;
-                }
-                if(Integer.parseInt(newAddr) < 0 || Integer.parseInt(newAddr) > 127){
-                    // TODO: put in explanation for user
-                    return;
-                }
-                serialComm.writeModuleSettings(modToEdit, newAddr, newName, newModType, getSelectedPins());
-                settingsWin.close();
-                that.enable();
+                that.defaultsBtnPressed();
             }
         });
 
-//        this.root.add(resetBtn, 1, 3);
-        this.root.add(saveBtn, 3, pinRowsCount + 5, 1, 1);
+        resetBtn = new Button("Undo Changes");
+        resetBtn.addEventFilter(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                that.resetBtnPressed();
+            }
+        });
+
+        saveBtn = new Button("Save Changes");
+        saveBtn.addEventFilter(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                that.saveBtnPressed();
+            }
+        });
+
+        int row = pinRowsCount + 1;
+        this.root.add(defaultsBtn, 1, row);
+        this.root.add(resetBtn, 2, row);
+        this.root.add(saveBtn, 3, row);
+    }
+
+    private void removeButtons() {
+        removeNode(resetBtn);
+        removeNode(saveBtn);
+        removeNode(defaultsBtn);
+    }
+
+    private void defaultsBtnPressed() {
+        Number[] pinValues;
+        Integer devTypeIdx = devTypeList.indexOf(devTypeBox.getValue());
+        String devType = devTypeValues[devTypeIdx].strip().toLowerCase();
+
+        switch (devType) {
+            case "face buttons":
+            case "d-pad":
+                pinValues = fourButtonPinDefaults;
+                break;
+            case "l trigger" :
+            case "r trigger" :
+                pinValues = triggerPinDefaults;
+                break;
+            case "l joystick":
+            case "r joystick":
+                pinValues = joystickPinDefaults;
+                break;
+            default:
+                pinValues = customPinDefaults;
+        }
+
+        for(int i = 0; i < pinValues.length; i++) {
+            pinComboBoxNodes[i].setValue(pinValues[i]);
+        }
+    }
+
+    private void resetBtnPressed() {
+        //address field and pins get set when device type changes
+        nameField.setText(modToEdit.getName());
+        newDevType = modToEdit.getDeviceType();
+        firstAddrDigit = determineAddrRange(true);
+    }
+
+    private void saveBtnPressed() {
+        disable();
+        String newAddr = "";
+        if(firstAddrDigit > 0) {
+            newAddr = firstAddrDigit + addrField.getValue().toString();
+        } else {
+            newAddr = customAddrField.getText();
+        }
+        int newAddrInt = Integer.parseInt(newAddr);
+
+        String newName = nameField.getText();
+
+        String errList = "";
+        // name can't contain semi-colons because we use them as delimiters
+        if(newName.contains(";")) {
+            errList += "Name cannot contain semi-colons\n";
+        }
+
+        // address needs to stay in valid range so we don't ruin the hardware
+        int lowestValidAddr = getAddrRangeLower();
+        int highestValidAddr = getAddrRangeUpper();
+        if(newAddrInt < lowestValidAddr || newAddrInt > highestValidAddr){
+            errList += "Address must be between " + getAddrRangeString() + "\n";
+        }
+
+        // we don't want duplicate addresses but we want to allow the device to keep the same address
+        if(newAddrInt != modToEdit.getAddressInt() && allModAddresses.contains(newAddr)) {
+                errList += "Address is already in use\n";
+        }
+
+        if(errList != "") {
+            openErrWin(errList);
+            enable();
+            return;
+        }
+
+        serialComm.writeModuleSettings(modToEdit, newAddr, newName, newDevType, getSelectedPins());
+        settingsWin.close();
+        enable();
+    }
+
+    private int getAddrRangeLower() {
+        if(firstAddrDigit > 0) {
+            return firstAddrDigit * 10;
+        } else {
+            return 70;
+        }
+    }
+
+    private int getAddrRangeUpper() {
+        if(firstAddrDigit > 0) {
+            return firstAddrDigit * 10 + 9;
+        } else {
+            return 127;
+        }
+    }
+
+    private String getAddrRangeString() {
+        if(firstAddrDigit > 0) {
+            return firstAddrDigit + "0 - " + firstAddrDigit + "9";
+        } else {
+            return "70 - 127";
+        }
+    }
+
+    private void openErrWin(String errList) {
+        new ErrorWindow(settingsWin, "There are errors with your input:\n" + errList);
     }
 
     private void disable() {
@@ -427,5 +507,36 @@ public class SettingsWindow {
         // if index is negative the node doesn't exist
         if(idx > -1)
             root.getChildren().remove(root.getChildren().get(idx));
+    }
+
+    private void devTypeChanged(Object newVal) {
+        newDevType = devTypeValues[devTypeList.indexOf(newVal)];
+        Integer newFirstAddrDigit = determineAddrRange(false);
+
+        if(newFirstAddrDigit < 0 && firstAddrDigit > 0) {
+                /* this means we went from a defined type to a custom type so we need to change around the address part
+                of the form to reflect that */
+            removeNode(addrField);
+            addCustomAddrForm();
+        } else if(newFirstAddrDigit > 0 && firstAddrDigit < 0) {
+            /* this means we went from a custom type to a defined type*/
+            removeNode(customAddrField);
+            addStandardAddrForm(newFirstAddrDigit);
+        } else if(newFirstAddrDigit > 0 && firstAddrDigit > 0) {
+            // in this case we just need to change the first digit of the address
+            addrLabel.setText("Address: " + newFirstAddrDigit);
+            addrNote.setText("Note: The address will be a two digit number but the first digit will be " + newFirstAddrDigit);
+
+            // if we changed back to the original type set the address to the original address
+            if(newDevType.equalsIgnoreCase(modToEdit.getDeviceType())) {
+                addrField.setValue(modToEdit.getAddressInt() % 10);
+            }
+            // if we're staying within custom address range and going back to original device type set address to original too
+        } else if(newFirstAddrDigit < 0 && firstAddrDigit < 0 && newDevType.equalsIgnoreCase(modToEdit.getDeviceType())) {
+            addrField.setValue(modToEdit.getAddress());
+        }
+
+        firstAddrDigit = newFirstAddrDigit;
+        addPins();
     }
 }

@@ -1,6 +1,9 @@
 package usersettingsgui.controller;
 import com.fazecast.jSerialComm.SerialPort;
+import javafx.stage.Stage;
 import usersettingsgui.model.ConnectedModule;
+import usersettingsgui.view.ErrorWindow;
+
 import java.io.*;
 
 public class SerialCommunication {
@@ -8,7 +11,7 @@ public class SerialCommunication {
     private static final int COMM_RATE = 115200;
     public SerialCommunication() { }
 
-    public String readInput() {
+    public String readInput(Stage stageForErrWin) {
         SerialPort comPort = SerialPort.getCommPort(this.portName);
         comPort.setBaudRate(COMM_RATE);
         comPort.openPort();
@@ -31,7 +34,6 @@ public class SerialCommunication {
             boolean haveSeenStart = false;
             while(true) {
                 currLine = in.readLine();
-                System.out.println(currLine);
 
                 if(currLine.contains("START")) {
                     haveSeenStart = true;
@@ -46,13 +48,6 @@ public class SerialCommunication {
                     isr.close();
                     inStream.close();
                     break;
-                }
-
-                numLines = input.split("\n").length;
-                if(numLines > 10) {
-                    System.out.println("Error: more than 10 lines (8 modules+2 indicator lines) from device.");
-                } else if(numLines > 18) {
-                    System.out.println("Too much info from device. Stopping read.");
                 }
             }
         } catch (Exception e) {
@@ -87,8 +82,6 @@ public class SerialCommunication {
         String settings = newAddr + ";" + newName + ";" + newDevType + ";" +
                 pinsString + "\n";
 
-        System.out.println(settings);
-
         SerialPort comPort = SerialPort.getCommPort(this.portName);
         comPort.setBaudRate(COMM_RATE);
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 10000, 10000);
@@ -121,8 +114,6 @@ public class SerialCommunication {
             in.readLine();
 //            System.out.println(in.readLine());
             in.readLine();
-
-            System.out.println("Done");
 
             out.close();
             in.close();

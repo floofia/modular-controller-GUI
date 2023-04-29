@@ -14,6 +14,10 @@ public class ConnectedModule {
         this.name = name.strip();
         this.deviceType = deviceType.strip();
 
+        if(this.getAddressInt() > 127) {
+            this.address = "73";
+        }
+
         setPins(pins);
         setImageFileName();
     }
@@ -60,7 +64,6 @@ public class ConnectedModule {
                 Integer pin = Integer.parseInt(pinsArr[i]);
                 pins[i] = pin;
             } catch(Exception e) {
-                System.out.println(e.getMessage());
             }
         }
     }
@@ -70,7 +73,11 @@ public class ConnectedModule {
     }
 
     public int getAddressInt() {
-        return Integer.parseInt(this.address);
+        try {
+            return Integer.parseInt(this.address);
+        } catch(Exception e) {
+            return -1;
+        }
     }
 
     public String getName() {
