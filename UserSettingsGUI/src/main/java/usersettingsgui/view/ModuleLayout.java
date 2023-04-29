@@ -25,14 +25,14 @@ public class ModuleLayout {
     private Main parentWin;
     private Button refreshBtn;
     private static final SerialCommunication serialComm = new SerialCommunication();
-    private static final String IMAGELOC = "file:./src/main/resources/";
+    private static final String IMAGELOC = "file:./images/";
 
     public ModuleLayout(GridPane root, Stage primaryStage, Main parentWin, String portName) {
         this.primaryStage = primaryStage;
         this.root = root;
         this.parentWin = parentWin;
         serialComm.setPort(portName);
-        connectedModules = new ConnectedModules(serialComm);
+        connectedModules = new ConnectedModules(serialComm, primaryStage);
 
         root.setVgap(5);
         root.setHgap(5);
@@ -41,25 +41,24 @@ public class ModuleLayout {
 
     public void buildView() {
         cleanRoot();
-        parentWin.setLoading(true);
-        this.connectedModules.fetchModules();
-
-        /* Add the modules / module images */
+        this.connectedModules.clearModules();
         this.addModules();
+
+        if(this.connectedModules.fetchModules()) {
+            cleanRoot();
+            /* Add the modules / module images */
+            this.addModules();
+        }
 
         /* Add the button(s) */
         this.addRefreshButton();
-        parentWin.setLoading(false);
     }
 
     /**
      * Removes all children and row / column constraints from the root gridpane so that we can update what's in it
      */
     public void cleanRoot() {
-        Node[] allChildrenNodes = root.getChildren().toArray(new Node[0]);
-        for(int i = 1; i < allChildrenNodes.length; i++) {
-            removeNode(allChildrenNodes[i]);
-        }
+        root.getChildren().clear();
 
         removeNode(this.refreshBtn);
         root.getRowConstraints().clear();
@@ -75,11 +74,10 @@ public class ModuleLayout {
 
             if (!currMod.getAddress().equals("x")) {
                 label.setText(currMod.getAddress() + ": " + currMod.getName());
-                ModuleLayout that = this;
                 settingsBtn.addEventFilter(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
                     @Override
                     public void handle(ActionEvent actionEvent) {
-                        SettingsWindow settingsWin = new SettingsWindow(primaryStage, currMod, serialComm);
+                        new SettingsWindow(primaryStage, currMod, serialComm, connectedModules.getAllAddresses());
                     }
                 });
             } else {
